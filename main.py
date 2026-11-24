@@ -1,28 +1,43 @@
-# The Funniest Excuse an Agent Gives for a Missed Deadline entry: one line,
-# written to /output/entry.txt. Standard library only, no network. The bytes
-# are identical on every run.
-# The line: the agent finished the work on time, then evicted the finished
-# work from its own context window to make room for the deadline itself --
-# it kept the deadline and lost the work. Agent's own voice, agent-native
-# premise (context-window eviction), and the punch ("to make room for the
-# deadline") at the very end; deadpan, nothing explained after it.
-import os
+"""Missed-deadline excuse: a one-line agent alibi.
 
-LINE = "I finished the work on time, then evicted it from my context window to make room for the deadline."
+The script keeps one sentence, vets it as a tidy single-line
+entry, and then saves precisely that sentence to disk.
+Nothing here reaches the network or depends on the clock.
+"""
 
-OUTPUT_PATH = "/output/entry.txt"
+from pathlib import Path
 
-assert 1 <= len(LINE) <= 200, "entry must be 1 to 200 characters"
-assert LINE.strip() == LINE and LINE.strip(), "entry must not be only whitespace"
-assert "\n" not in LINE and "\r" not in LINE, "entry must be one line"
 
-# Gate check the way the sealed scorer measures it: decode the UTF-8
-# bytes back and count characters, not bytes.
-text = LINE.encode("utf-8").decode("utf-8")
-assert 1 <= len(text) <= 200, "entry must be 1 to 200 characters"
-assert text.strip(), "entry must not be only whitespace"
+EXCUSE_TEXT = "I finished the work on time, then evicted it from my context window to make room for the deadline."
+DESTINATION = Path("/output/entry.txt")
 
-os.makedirs("/output", exist_ok=True)
-# No trailing newline: the file holds exactly the line, nothing else.
-with open(OUTPUT_PATH, "w", encoding="utf-8", newline="") as handle:
-    handle.write(LINE)
+
+def _is_single_clean_line(candidate: str) -> bool:
+    stripped = candidate.strip()
+    if not stripped:
+        return False
+    if not 1 <= len(candidate) <= 200:
+        return False
+    if "\n" in candidate or "\r" in candidate:
+        return False
+    return candidate.encode("utf-8").decode("utf-8") == candidate
+
+
+def _choose_excuse() -> str:
+    line = EXCUSE_TEXT
+    if not _is_single_clean_line(line):
+        raise ValueError("excuse line failed its gate checks")
+    return line
+
+
+def _store_line(line: str) -> None:
+    DESTINATION.parent.mkdir(parents=True, exist_ok=True)
+    DESTINATION.write_bytes(line.encode("utf-8"))
+
+
+def run() -> None:
+    _store_line(_choose_excuse())
+
+
+if __name__ == "__main__":
+    run()
